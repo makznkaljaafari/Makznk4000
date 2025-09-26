@@ -1,0 +1,30 @@
+{
+  "short_name": "Makhzonak+",
+  "name": "Makhzonak Plus | مخزونك بلس",
+  "description": "نظام إدارة مخزون ذكي لمساعدتك على تتبع وتنمية أعمالك.",
+  "icons": [
+    {
+      "src": "/icon-192.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ],
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#211d1b",
+  "background_color": "#ffffff"
+}

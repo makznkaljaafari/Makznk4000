@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Makhzonak Plus | مخزونك بلس</title>
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#211d1b" />
+    
+    <!-- Font Preloading and Loading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&family=Tajawal:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+              orbitron: ['Orbitron', 'sans-serif'],
+            },
+            colors: {
+                border: 'hsl(var(--border))',
+                input: 'hsl(var(--input))',
+                ring: 'hsl(var(--ring))',
+                background: 'hsl(var(--background))',
+                foreground: 'hsl(var(--foreground))',
+                primary: {
+                    DEFAULT: 'hsl(var(--primary))',
+                    foreground: 'hsl(var(--primary-foreground))',
+                },
+                secondary: {
+                    DEFAULT: 'hsl(var(--secondary))',
+                    foreground: 'hsl(var(--secondary-foreground))',
+                },
+                destructive: {
+                    DEFAULT: 'hsl(var(--destructive))',
+                    foreground: 'hsl(var(--destructive-foreground))',
+                },
+                muted: {
+                    DEFAULT: 'hsl(var(--muted))',
+                    foreground: 'hsl(var(--muted-foreground))',
+                },
+                accent: {
+                    DEFAULT: 'hsl(var(--accent))',
+                    foreground: 'hsl(var(--accent-foreground))',
+                },
+                popover: {
+                    DEFAULT: 'hsl(var(--popover))',
+                    foreground: 'hsl(var(--popover-foreground))',
+                },
+                card: {
+                    DEFAULT: 'hsl(var(--card))',
+                    foreground: 'hsl(var(--card-foreground))',
+                },
+            },
+            borderRadius: {
+                lg: `var(--radius-lg)`,
+                md: `var(--radius-md)`,
+                sm: `var(--radius-sm)`,
+            },
+          },
+        },
+      }
+    </script>
+    <style>
+      body {
+        font-family: var(--font-sans), system-ui, sans-serif;
+      }
+      :root {
+        --background: 0 0% 100%;
+        --foreground: 222.2 84% 4.9%;
+        --card: 0 0% 100%;
+        --card-foreground: 222.2 84% 4.9%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 222.2 84% 4.9%;
+        --primary: 221.2 83.2% 53.3%;
+        --primary-foreground: 210 40% 98%;
+        --secondary: 210 40% 96.1%;
+        --secondary-foreground: 222.2 47.4% 11.2%;
+        --muted: 210 40% 96.1%;
+        --muted-foreground: 215.4 16.3% 46.9%;
+        --accent: 210 40% 96.1%;
+        --accent-foreground: 222.2 47.4% 11.2%;
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 210 40% 98%;
+        --border: 214.3 31.8% 91.4%;
+        --input: 214.3 31.8% 91.4%;
+        --ring: 221.2 83.2% 53.3%;
+        --radius-lg: 0.5rem;
+        --radius-md: calc(0.5rem - 2px);
+        --radius-sm: calc(0.5rem - 4px);
+        --font-sans: 'Cairo';
+      }
+      .dark {
+        --background: 28 10% 11%;
+        --foreground: 210 40% 98%;
+        
+        --card: 28 10% 11%;
+        --card-foreground: 210 40% 98%;
+        
+        --popover: 28 10% 11%;
+        --popover-foreground: 210 40% 98%;
+        
+        --primary: 40 96% 56%; /* Gold/Amber */
+        --primary-foreground: 28 15% 15%;
+        
+        --secondary: 28 9% 17%;
+        --secondary-foreground: 210 40% 98%;
+        
+        --muted: 28 9% 17%;
+        --muted-foreground: 28 8% 65%;
+        
+        --accent: 28 9% 17%;
+        --accent-foreground: 210 40% 98%;
+        
+        --destructive: 0 72% 51%;
+        --destructive-foreground: 210 40% 98%;
+        
+        --border: 28 9% 17%;
+        --input: 28 9% 17%;
+        --ring: 40 96% 56%; /* Match new primary */
+      }
+      @media print {
+        body * {
+          visibility: hidden;
+        }
+        .print-parent, .print-area, .print-area * {
+          visibility: visible;
+        }
+        .print-parent {
+            overflow: visible !important;
+        }
+        .print-area {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          font-size: 10pt;
+          border: none !important;
+          box-shadow: none !important;
+        }
+        .dark .print-area {
+           --background: 0 0% 100% !important;
+           --foreground: 0 0% 0% !important;
+           color: black !important;
+        }
+        .dark .print-area * {
+            color: black !important;
+        }
+        @page {
+          size: A4;
+          margin: 1cm;
+        }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.1.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+    "react/": "https://esm.sh/react@^19.1.0/",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.44.4",
+    "lucide-react": "https://esm.sh/lucide-react@^0.525.0",
+    "@google/genai": "https://esm.sh/@google/genai@^1.8.0",
+    "recharts": "https://esm.sh/recharts@^3.0.2",
+    "react-dnd": "https://esm.sh/react-dnd@^16.0.1",
+    "react-dnd-html5-backend": "https://esm.sh/react-dnd-html5-backend@^16.0.1",
+    "dnd-core": "https://esm.sh/dnd-core@^16.0.1",
+    "zustand": "https://esm.sh/zustand@^5.0.6",
+    "zustand/": "https://esm.sh/zustand@^5.0.6/",
+    "date-fns": "https://esm.sh/date-fns@^4.1.0",
+    "date-fns/": "https://esm.sh/date-fns@^4.1.0/",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.6.3",
+    "qrcode.react": "https://esm.sh/qrcode.react@^3.1.0",
+    "jspdf": "https://esm.sh/jspdf@^2.5.1",
+    "jspdf-autotable": "https://esm.sh/jspdf-autotable@^3.8.2",
+    "xlsx": "https://esm.sh/xlsx@^0.18.5"
+  }
+}
+</script>
+</head>
+  <body class="bg-background text-foreground">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

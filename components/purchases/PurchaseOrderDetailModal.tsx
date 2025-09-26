@@ -1,0 +1,118 @@
+
+
+import React, { useMemo, FC } from 'react';
+import { PurchaseOrder, Part, Currency } from '../../types';
+import { useLocalization } from '../../hooks/useLocalization';
+import { useAppStore } from '../../stores/useAppStore';
+import { X, Printer, Warehouse } from 'lucide-react';
+import Card from '../common/Card';
+
+const PurchaseInvoiceDetailModal: FC<{ po: PurchaseOrder | null; isOpen: boolean; onClose: () => void }> = ({ po, isOpen, onClose }) => {
+    const { t, lang } = useLocalization();
+    const { companies, currentUser, parts, currencies, suppliers } = useAppStore();
+    const companyProfile = useMemo(() => companies.find(c => c.id === currentUser?.companyId), [companies, currentUser]);
+    
+    const partsMap = useMemo(() => new Map(parts.map(p => [p.id, p])), [parts]);
+    const currency = useMemo(() => currencies.find(c => c.id === po?.currencyId), [currencies, po]);
+
+    if (!isOpen || !po || !companyProfile) return null;
+
+    const handlePrint = () => {
+        window.print();
+    };
+
+    const formatCurrency = (amount: number) => {
+        return `${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency?.symbol || ''}`;
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4 print:hidden" onClick={onClose}>
+            <Card className="w-full max-w-4xl h-[95vh] flex flex-col gap-4" onClick={(e) => e.stopPropagation()}>
+                <header className="flex justify-between items-center pb-4 border-b border-border">
+                    <h2 className="text-2xl font-bold">{t('po_found_details')} - {po.id}</h2>
+                    <div className="flex items-center gap-4">
+                        <button onClick={handlePrint} className="flex items-center gap-2 bg-secondary text-secondary-foreground px-4 py-2 rounded-lg shadow hover:bg-secondary/80">
+                            <Printer size={18} />
+                            <span>{t('print')}</span>
+                        </button>
+                        <button onClick={onClose} className="p-2 rounded-full text-muted-foreground hover:bg-accent"><X size={24} /></button>
+                    </div>
+                </header>
+
+                <div className="flex-grow overflow-auto p-1 bg-muted/20 print-parent">
+                    <div className="print-area bg-card text-card-foreground p-6">
+                        <section className="flex justify-between items-start pb-6 border-b-2 border-primary">
+                            <div>
+                                {companyProfile.logoUrl ? (
+                                    <img src={companyProfile.logoUrl} alt={`${companyProfile.name} Logo`} className="h-20 w-auto object-contain mb-2" />
+                                ) : (
+                                    <div className="flex items-center space-x-2 rtl:space-x-reverse text-2xl font-bold text-primary mb-2">
+                                        <Warehouse size={32} />
+                                        <span className="text-foreground">{companyProfile.name}</span>
+                                    </div>
+                                )}
+                                <p className="text-xs text-muted-foreground">{companyProfile.address}</p>
+                            </div>
+                            <div className="text-end">
+                                <h1 className="text-3xl font-bold uppercase">{t('purchase_order')}</h1>
+                                <p className="text-muted-foreground font-mono">{po.id}</p>
+                            </div>
+                        </section>
+
+                        <section className="grid grid-cols-2 gap-6 my-6">
+                            <div>
+                                <h3 className="font-semibold text-muted-foreground">{t('supplier')}</h3>
+                                <p className="text-lg font-bold">{po.supplierName}</p>
+                            </div>
+                            <div className="text-end">
+                                <h3 className="font-semibold text-muted-foreground mt-2">{t('date')}</h3>
+                                <p>{po.date}</p>
+                            </div>
+                        </section>
+
+                        <table className="w-full text-sm mt-6">
+                            <thead className="bg-muted/50">
+                                <tr>
+                                    <th className="p-3 text-start font-semibold">#</th>
+                                    <th className="p-3 text-start font-semibold">{t('item_description')}</th>
+                                    <th className="p-3 text-center font-semibold">{t('quantity')}</th>
+                                    <th className="p-3 text-end font-semibold">{t('unit_price')}</th>
+                                    <th className="p-3 text-end font-semibold">{t('total')}</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                                {po.items.map((item, index) => {
+                                    const part = partsMap.get(item.partId) as Part | undefined;
+                                    const itemTotal = item.quantity * item.purchasePrice;
+                                    return (
+                                        <tr key={index}>
+                                            <td className="p-3">{index + 1}</td>
+                                            <td className="p-3 font-medium">
+                                                <div>{part?.name || '...'}</div>
+                                                <div className="text-xs text-muted-foreground">{part?.partNumber}</div>
+                                            </td>
+                                            <td className="p-3 text-center">{item.quantity}</td>
+                                            <td className="p-3 text-end font-mono">{formatCurrency(item.purchasePrice)}</td>
+                                            <td className="p-3 text-end font-mono">{formatCurrency(itemTotal)}</td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+
+                        <div className="flex justify-end mt-6">
+                            <div className="w-full max-w-sm space-y-2">
+                                <div className="flex justify-between text-xl font-bold pt-2 border-t border-foreground">
+                                    <span className="">{t('grand_total')}</span>
+                                    <span className="">{formatCurrency(po.total)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </Card>
+        </div>
+    );
+};
+
+export default PurchaseInvoiceDetailModal;
