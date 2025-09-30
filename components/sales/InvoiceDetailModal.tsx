@@ -1,14 +1,16 @@
-
 import React, { useMemo, FC } from 'react';
 import { Sale, Part } from '../../types';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useAppStore } from '../../stores/useAppStore';
-import { X, Printer, Warehouse } from 'lucide-react';
+import { X, Printer, Warehouse, MessageSquare, Send as SendIcon } from 'lucide-react';
 import Card from '../common/Card';
+import { useToast } from '../../contexts/ToastContext';
 
 const InvoiceDetailModal: FC<{ invoice: Sale | null; onClose: () => void }> = ({ invoice, onClose }) => {
   const { t, lang } = useLocalization();
-  const { companies, currentUser, parts, currencies, customers } = useAppStore();
+  const { companies, currentUser, parts, currencies, customers, activeCompany } = useAppStore();
+  const { addToast } = useToast();
+
   const companyProfile = useMemo(() => companies.find(c => c.id === currentUser?.companyId), [companies, currentUser]);
   const customer = useMemo(() => customers.find(c => c.name === invoice?.customerName), [customers, invoice]);
   const partsMap = useMemo(() => new Map<string, Part>(parts.map(p => [p.id, p])), [parts]);
@@ -19,6 +21,12 @@ const InvoiceDetailModal: FC<{ invoice: Sale | null; onClose: () => void }> = ({
   const handlePrint = () => {
     window.print();
   };
+  
+  const handleSend = (platform: 'whatsapp' | 'telegram') => {
+      console.log(`Simulating sending invoice ${invoice.id} via ${platform}`);
+      // In a real app, this would generate a PDF and use the respective API.
+      addToast(t('invoice_sent_successfully'), 'success');
+  };
 
   const taxRate = companyProfile?.taxSettings?.isEnabled ? companyProfile.taxSettings.rate : 0;
   const totalWithoutVat = invoice.total / (1 + taxRate);
@@ -27,6 +35,10 @@ const InvoiceDetailModal: FC<{ invoice: Sale | null; onClose: () => void }> = ({
   const formatCurrency = (amount: number) => {
     return `${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency?.symbol || ''}`;
   };
+
+  const integrationSettings = activeCompany?.integrationSettings;
+  const isWhatsappConnected = integrationSettings?.whatsappStatus === 'connected';
+  const isTelegramConnected = integrationSettings?.telegramStatus === 'connected';
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4 print:hidden" onClick={onClose}>
@@ -114,6 +126,29 @@ const InvoiceDetailModal: FC<{ invoice: Sale | null; onClose: () => void }> = ({
                 </div>
             </div>
         </div>
+         <footer className="flex-shrink-0 p-4 border-t border-border flex justify-end gap-2 print:hidden">
+            <button
+                onClick={() => handleSend('whatsapp')}
+                disabled={!isWhatsappConnected}
+                title={!isWhatsappConnected ? t('integration_not_connected') : ''}
+                className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg shadow hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                <MessageSquare size={18} />
+                <span>{t('send_via_whatsapp')}</span>
+            </button>
+            <button
+                 onClick={() => handleSend('telegram')}
+                 disabled={!isTelegramConnected}
+                 title={!isTelegramConnected ? t('integration_not_connected') : ''}
+                className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                <SendIcon size={18} />
+                <span>{t('send_via_telegram')}</span>
+            </button>
+            <button onClick={onClose} className="bg-secondary text-secondary-foreground px-4 py-2 rounded-lg shadow hover:bg-muted transition-colors">
+                {t('close')}
+            </button>
+        </footer>
       </Card>
     </div>
   );

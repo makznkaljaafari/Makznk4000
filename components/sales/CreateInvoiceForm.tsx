@@ -1,7 +1,4 @@
 
-
-
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Sale, Customer, InventoryMovement, Currency, Part, UpsellSuggestion, DynamicPricingSuggestion, Company, Promotion } from '../../types';
 import { useLocalization } from '../../hooks/useLocalization';
@@ -59,7 +56,7 @@ export const CreateInvoiceForm: React.FC<{
     
     const [
         items,
-        { addItem, addFilledItem, addKit, removeItem, updateItem, resetItems, setLoyaltyPointsToUse },
+        { addItem, addFilledItem, addKit, removeItem, updateItem, resetItems, setLoyaltyPointsToUse, removeItems, copyItems },
         { subtotal, totalDiscount, vat, grandTotal, loyaltyDiscount },
         loyaltyPointsToUse
     ] = useInvoiceCalculator([], taxRate, riyalValuePerPoint);
@@ -113,22 +110,30 @@ export const CreateInvoiceForm: React.FC<{
     useEffect(() => {
         if (formPrefill?.form === 'sale') {
             const { customerName, items: prefillItems } = formPrefill.data;
-            const customer = customers.find(c => c.name.toLowerCase() === customerName?.toLowerCase());
+            const customer = customers.find(c => c.name.toLowerCase().includes(customerName?.toLowerCase()));
             if (customer) {
                 setCustomerId(customer.id);
+            } else if (customerName) {
+                 setCustomerId('cash_sale'); // Fallback to cash sale if customer not found
+                 addToast(`${t('customer')} "${customerName}" ${t('not_found')}.`, 'warning');
             }
+            
             if (prefillItems && prefillItems.length > 0) {
                 resetItems(); // Clear existing items before adding new ones
-                prefillItems.forEach((item: { partName: string, quantity: number }) => {
+                prefillItems.forEach((item: { partName: string, quantity: number, price?: number }) => {
+                    // Find the best match for the part name
                     const part = parts.find(p => p.name.toLowerCase().includes(item.partName.toLowerCase()));
                     if (part) {
-                        addFilledItem({ partId: part.id, name: part.name, price: part.sellingPrice, quantity: item.quantity });
+                        const priceToUse = item.price !== undefined ? item.price : part.sellingPrice;
+                        addFilledItem({ partId: part.id, name: part.name, price: priceToUse, quantity: item.quantity });
+                    } else {
+                        addToast(`${t('part_not_found')}: ${item.partName}`, 'warning');
                     }
                 });
             }
             setFormPrefill(null); // Clear prefill after using it
         }
-    }, [formPrefill, customers, parts, setFormPrefill, resetItems, addFilledItem]);
+    }, [formPrefill, customers, parts, setFormPrefill, resetItems, addFilledItem, t, addToast]);
 
 
     useEffect(() => {
@@ -246,8 +251,7 @@ export const CreateInvoiceForm: React.FC<{
             
             setInvoiceToPrint(newSaleFromDB);
             resetItems();
-            addToast(t('invoice_saved_success'), 'success');
-            setActiveTab('invoices');
+            addToast(t('invoice_created_successfully'), 'success');
 
         } catch (error) {
             addToast((error as Error).message, 'error');
@@ -330,7 +334,7 @@ export const CreateInvoiceForm: React.FC<{
                 content={pitchContent}
                 partName={pitchForPartName}
             />
-            {invoiceToPrint && <InvoiceDetailModal invoice={invoiceToPrint} onClose={() => setInvoiceToPrint(null)} />}
+            <InvoiceDetailModal invoice={invoiceToPrint} onClose={() => { setInvoiceToPrint(null); setActiveTab('invoices'); }} />
             <BarcodeScanner isOpen={isBarcodeScannerOpen} onClose={() => setIsBarcodeScannerOpen(false)} onScan={(val) => addToast('Scanned: ' + val, 'info')} />
             
             <Card>
@@ -357,13 +361,15 @@ export const CreateInvoiceForm: React.FC<{
                 </div>
             </Card>
 
-            {pricingSuggestion && <AiPricingSuggestion suggestion={pricingSuggestion} isLoading={isPricingSuggesting} onApply={applyPricingSuggestion} />}
-            <div className="flex-grow grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-[300px]">
-                <div className="lg:col-span-2 flex flex-col">
+            
+            <div className="flex-grow flex flex-col gap-4 min-h-[300px]">
+                <div className="flex-grow">
                     <InvoiceItemsTable 
                         items={items}
                         onUpdateItem={handleItemUpdateWithPromotion}
                         onRemoveItem={removeItem}
+                        onRemoveItems={removeItems}
+                        onCopyItems={copyItems}
                         onAddItem={addItem}
                         onSearchPart={(index) => { setSearchModalRowIndex(index); setIsSearchModalOpen(true); }}
                         onGeneratePitch={(index) => {
@@ -380,9 +386,8 @@ export const CreateInvoiceForm: React.FC<{
                         openAiAssistant={openAiAssistant}
                     />
                 </div>
-                <div className="lg:col-span-1">
-                     <AiUpsellSuggestions suggestions={suggestions} isLoading={isSuggesting} onAddSuggestion={handleAddItemFromSuggestion} />
-                </div>
+                {pricingSuggestion && <AiPricingSuggestion suggestion={pricingSuggestion} isLoading={isPricingSuggesting} onApply={applyPricingSuggestion} />}
+                <AiUpsellSuggestions suggestions={suggestions} isLoading={isSuggesting} onAddSuggestion={handleAddItemFromSuggestion} />
             </div>
             <Card>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, Chat, GenerateContentResponse, Part as ContentPart } from "@google/genai";
 import { Sparkles, X, Send, Bot, User, Globe, MessageSquare, Search as SearchIcon } from 'lucide-react';
@@ -7,9 +6,9 @@ import { useLocalization } from '../../hooks/useLocalization';
 import Card from '../common/Card';
 import Spinner from '../common/Spinner';
 import { useAppStore } from '../../stores/useAppStore';
-import { Part, AlternativeSuggestion, Customer } from '../../types';
+import { Part, AlternativeSuggestion, Customer, Sale } from '../../types';
 import PartCard from './PartCard';
-import { findAlternativeParts, suggestCollectionAction } from '../../services/geminiService';
+import { findAlternativeParts, suggestCollectionAction, parseInvoiceCommand, generateReportFromCommand } from '../../services/geminiService';
 
 
 // Define message structure
@@ -76,7 +75,7 @@ const parseMessageText = (text: string, setActiveView: (view: string) => void) =
 
 const AiAssistant: React.FC<{ setActiveView: (view: string) => void }> = ({ setActiveView }) => {
     const { t } = useLocalization();
-    const { parts, sales, aiAppMessages, setAiAppMessages, aiWebMessages, setAiWebMessages, isAiAssistantOpen, aiAssistantContext, openAiAssistant, closeAiAssistant } = useAppStore();
+    const { parts, sales, customers, aiAppMessages, setAiAppMessages, aiWebMessages, setAiWebMessages, isAiAssistantOpen, aiAssistantContext, openAiAssistant, closeAiAssistant, setFormPrefill, setSalesActiveTab } = useAppStore();
     
     const [inputValue, setInputValue] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -122,14 +121,52 @@ const AiAssistant: React.FC<{ setActiveView: (view: string) => void }> = ({ setA
     const sendInput = async (text: string) => {
         if (!text.trim() || isLoading) return;
 
-        const chat = activeTab === 'app' ? appChat : webChat;
-        const setMessages = activeTab === 'app' ? setAiAppMessages : setAiWebMessages;
-
-        if (!chat) return;
-
         const userMessage: AiMessage = { role: 'user', parts: [{ text }] };
-        setMessages(prev => [...prev, userMessage]);
+        const setMessages = activeTab === 'app' ? setAiAppMessages : setAiWebMessages;
+        
         setIsLoading(true);
+        setMessages(prev => [...prev, userMessage]);
+
+        // App-specific commands
+        if (activeTab === 'app') {
+            // Check for invoice creation command
+            const invoiceData = await parseInvoiceCommand(text);
+            if (invoiceData) {
+                setFormPrefill({ form: 'sale', data: invoiceData });
+                setActiveView('sales');
+                setSalesActiveTab('create');
+                
+                const modelMessage: AiMessage = { role: 'model', parts: [{ text: t('ai_prefilled_invoice') }] };
+                setMessages(prev => [...prev, modelMessage]);
+                setIsLoading(false);
+                return;
+            }
+            
+            // Check for report command
+            const reportKeywords = ['تقرير', 'ملخص', 'report', 'summary', 'أعطني', 'كم مبيعات'];
+            if (reportKeywords.some(keyword => text.toLowerCase().includes(keyword))) {
+                const thinkingMessage: AiMessage = { role: 'model', parts: [{ text: t('ai_generating_report') }] };
+                setMessages(prev => [...prev, thinkingMessage]);
+                
+                try {
+                    const reportText = await generateReportFromCommand(text, sales, customers, parts);
+                    const reportMessage: AiMessage = { role: 'model', parts: [{ text: reportText || t('failed_to_generate_report') }] };
+                    setMessages(prev => [...prev.slice(0, -1), reportMessage]);
+                } catch (error) {
+                    const errorMessage: AiMessage = { role: 'model', parts: [{ text: (error as Error).message || t('failed_to_generate_report') }] };
+                     setMessages(prev => [...prev.slice(0, -1), errorMessage]);
+                }
+                
+                setIsLoading(false);
+                return;
+            }
+        }
+        
+        const chat = activeTab === 'app' ? appChat : webChat;
+        if (!chat) {
+             setIsLoading(false);
+             return;
+        }
 
         try {
             const responseStream = await chat.sendMessageStream({ message: text });
@@ -257,8 +294,9 @@ const AiAssistant: React.FC<{ setActiveView: (view: string) => void }> = ({ setA
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        sendInput(inputValue);
+        const currentInput = inputValue;
         setInputValue('');
+        sendInput(currentInput);
     };
     
     const handleSuggestedPromptClick = (prompt: string) => {

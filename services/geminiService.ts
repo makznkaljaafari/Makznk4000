@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
+import { GoogleGenAI, GenerateContentResponse, FunctionDeclaration, Type } from "@google/genai";
 import { Part, Customer, Sale, AiPrediction, VehicleInfo, PartSearchAgentParams, AiParsedData, Supplier, PurchaseOrder, UpsellSuggestion, DynamicPricingSuggestion, AlternativeSuggestion, AiReportAnalysis, InvoiceAnalysisResult, InventoryAnalysisResult } from '../types';
 
 const API_KEY = process.env.API_KEY;
@@ -240,6 +240,44 @@ export const searchForPartWithGoogle = async (searchParams: PartSearchAgentParam
         throw new Error('failed_to_search_with_google');
     }
 };
+
+// FIX: Add missing generateDashboardInsights function
+export const generateDashboardInsights = async (
+    { sales, parts, customers }: { sales: Sale[]; parts: Part[]; customers: Customer[] }
+): Promise<string[] | null> => {
+    const prompt = `
+        You are an expert business analyst for a car parts store in Saudi Arabia.
+        Analyze the provided sales, inventory, and customer data to generate 2-3 concise, actionable insights in Arabic for the dashboard.
+        Focus on identifying important trends, opportunities, or potential issues. For example:
+        - "قطعة 'فلتر زيت' تباع بسرعة ولكن مخزونها منخفض."
+        - "العميل 'ورشة الاتحاد' يقترب من حده الائتماني."
+        - "مبيعات ماركة 'تويوتا' زادت هذا الشهر."
+
+        Sales Data (sample):
+        ${JSON.stringify(sales.slice(0, 20).map(s => ({ total: s.total, date: s.date, items: s.items.length })), null, 2)}
+
+        Inventory Data (sample):
+        ${JSON.stringify(parts.slice(0, 20).map(p => ({ name: p.name, stock: p.stock, minStock: p.minStock, sellingPrice: p.sellingPrice })), null, 2)}
+
+        Customer Data (sample):
+        ${JSON.stringify(customers.slice(0, 20).map(c => ({ name: c.name, totalDebt: c.totalDebt, creditLimit: c.creditLimit })), null, 2)}
+
+        Respond ONLY with a valid JSON array of strings, where each string is an insight in Arabic.
+        Example: ["القطعة 'فلتر هواء' الأكثر مبيعًا هذا الأسبوع.", "تنبيه: 5 أصناف مخزونها أقل من الحد الأدنى."]
+    `;
+    try {
+        const response: GenerateContentResponse = await ai.models.generateContent({
+            model,
+            contents: prompt,
+            config: { responseMimeType: "application/json" }
+        });
+        return parseJsonResponse<string[]>(response.text);
+    } catch (error) {
+        console.error("Error generating dashboard insights:", error);
+        return null;
+    }
+};
+
 
 export const parsePartInfoFromSpeech = async (transcript: string): Promise<Partial<Part> | null> => {
     const prompt = `You are a smart assistant for an auto parts inventory system. Your task is to parse a spoken sentence and extract structured information for a new part. The user might speak in Arabic or a mix of Arabic and English. Extract the following fields: 'name', 'partNumber', 'brand', 'sellingPrice' (as a number), 'purchasePrice' (as a number), 'minStock' (as a number), 'size', 'unit', 'notes', and 'alternativePartNumbers' (as an array of strings). The user's speech is: "${transcript}". Respond ONLY with a JSON object containing the extracted fields. If a field is not mentioned, omit it from the JSON. For 'alternativePartNumbers', if the user says multiple numbers, put them in an array.`;
@@ -808,31 +846,96 @@ export const analyzeInventoryHealth = async (
     }
 };
 
-// FIX: Added missing function to resolve import error in Dashboard.tsx.
-export const generateDashboardInsights = async (
-    context: { sales: Sale[], parts: Part[], customers: Customer[] }
-): Promise<string[] | null> => {
-    const prompt = `
-        You are "مساعد", an expert business analyst for a car parts store in Saudi Arabia.
-        Based on the following data, provide 3-5 brief, actionable insights for the dashboard.
-        Focus on identifying immediate opportunities or risks.
-        For example: low stock on a fast-selling item, a customer nearing their credit limit, or a product that hasn't sold in a long time.
-        Each insight should be a single, concise sentence in Arabic.
+const createInvoiceFunctionDeclaration: FunctionDeclaration = {
+  name: 'create_invoice',
+  description: 'Parses a user command to create a sales invoice for a car parts store.',
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      customerName: {
+        type: Type.STRING,
+        description: 'The name of the customer for the invoice.',
+      },
+      items: {
+        type: Type.ARRAY,
+        description: 'A list of items to be included in the invoice.',
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            partName: {
+              type: Type.STRING,
+              description: 'The name or description of the car part.',
+            },
+            quantity: {
+              type: Type.NUMBER,
+              description: 'The quantity of the part being sold.',
+            },
+            price: {
+              type: Type.NUMBER,
+              description: 'The unit price for one item of the part.',
+            },
+          },
+          required: ['partName', 'quantity', 'price'],
+        },
+      },
+    },
+    required: ['customerName', 'items'],
+  },
+};
 
-        Context Data:
-        - Recent Sales (sample): ${JSON.stringify(context.sales.slice(0, 20), null, 2)}
-        - Inventory (sample): ${JSON.stringify(context.parts.filter(p => p.stock < p.minStock * 1.5).slice(0, 20), null, 2)}
-        - Customers (sample): ${JSON.stringify(context.customers.filter(c => c.totalDebt > 0).slice(0, 20), null, 2)}
+export const parseInvoiceCommand = async (command: string): Promise<{ customerName: string; items: { partName: string; quantity: number; price: number }[] } | null> => {
+    try {
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: command,
+          config: {
+            tools: [{functionDeclarations: [createInvoiceFunctionDeclaration]}],
+          },
+        });
 
-        Respond ONLY with a valid JSON object with a single key "insights", which is an array of strings.
-        Example:
-        {
-          "insights": [
-            "تنبيه: الصنف 'فلتر زيت' على وشك النفاد وهو من الأكثر مبيعاً.",
-            "فرصة: العميل 'ورشة الاتحاد' لم يقم بالشراء منذ 35 يوماً، قد يحتاج للمتابعة.",
-            "ملاحظة: الصنف 'مساعدات أمامية' لم يتم بيعه منذ 90 يوماً، قد تفكر في عمل عرض عليه."
-          ]
+        const functionCall = response.functionCalls?.[0];
+        if (functionCall && functionCall.name === 'create_invoice') {
+            return functionCall.args as any;
         }
+        return null;
+    } catch (error) {
+        console.error("Error parsing invoice command:", error);
+        return null;
+    }
+};
+
+export const generateReportFromCommand = async (
+    command: string,
+    sales: Sale[],
+    customers: Customer[],
+    parts: Part[]
+): Promise<string | null> => {
+    const salesSample = sales.slice(0, 50).map(s => ({ customerName: s.customerName, total: s.total, date: s.date, itemCount: s.items.length }));
+    const customerSample = customers.slice(0, 20).map(c => ({ name: c.name, totalDebt: c.totalDebt }));
+    const partsSample = parts.slice(0, 50).map(p => ({ name: p.name, stock: p.stock, sellingPrice: p.sellingPrice }));
+
+    const prompt = `
+        You are "مساعد", an expert business data analyst for a car parts store in Saudi Arabia. Your task is to analyze the provided data based on a user's natural language request and provide a concise summary report in Arabic.
+
+        **User's Request:** "${command}"
+
+        **Available Data:**
+
+        1.  **Sales Data (sample):**
+            ${JSON.stringify(salesSample, null, 2)}
+
+        2.  **Customers Data (sample):**
+            ${JSON.stringify(customerSample, null, 2)}
+            
+        3.  **Inventory Data (sample):**
+            ${JSON.stringify(partsSample, null, 2)}
+
+        **Instructions:**
+        1.  Understand the user's request (e.g., "top customers this month", "sales report last week", "low stock items").
+        2.  Analyze the provided JSON data to answer the request. You must perform calculations like summing totals, filtering by date, and finding top items based on the data.
+        3.  Generate a clear, well-formatted response in Arabic. Use bullet points and bold text to make it easy to read.
+        4.  If the request cannot be answered with the given data, politely state that.
+        5.  Do not make up information. Base your entire response on the provided data.
     `;
 
     try {
@@ -840,16 +943,14 @@ export const generateDashboardInsights = async (
             model,
             contents: prompt,
             config: {
-                responseMimeType: "application/json",
-                temperature: 0.5
+                temperature: 0.3,
             }
         });
-
-        const result = parseJsonResponse<{ insights: string[] }>(response.text);
-        return result?.insights || null;
+        
+        return response.text;
 
     } catch (error) {
-        console.error("Error generating dashboard insights:", error);
-        return null; // Return null on error to avoid breaking the UI
+        console.error("Error generating report from command:", error);
+        throw new Error('failed_to_generate_report');
     }
 };

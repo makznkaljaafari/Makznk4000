@@ -107,6 +107,24 @@ export const useInvoiceCalculator = (initialItems: FormInvoiceItem[] = [getEmpty
             return [getEmptyRow()];
         });
     };
+
+    const removeItems = (ids: number[]) => {
+        setItems(prev => {
+            const newItems = prev.filter(item => !ids.includes(item.id));
+            if (newItems.length > 0) {
+                return newItems;
+            }
+            return [getEmptyRow()];
+        });
+    };
+    
+    const copyItems = (ids: number[]) => {
+        setItems(prev => {
+            const itemsToCopy = prev.filter(item => ids.includes(item.id));
+            const newCopiedItems = itemsToCopy.map(item => ({ ...item, id: Date.now() + Math.random() }));
+            return [...prev, ...newCopiedItems];
+        });
+    };
     
     const selectPartForRow = (index: number, part: Part, price: number) => {
         updateItem(index, {
@@ -152,6 +170,8 @@ export const useInvoiceCalculator = (initialItems: FormInvoiceItem[] = [getEmpty
         selectPartForRow,
         resetItems,
         setLoyaltyPointsToUse,
+        removeItems,
+        copyItems,
     };
     
     return [items, actions, totals, loyaltyPointsToUse] as const;

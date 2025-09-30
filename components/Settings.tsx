@@ -1,6 +1,8 @@
+
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocalization } from '../hooks/useLocalization';
-import { SlidersHorizontal, Building, DollarSign, Package, Users, Cog, DatabaseBackup, FileText, Shield, Bell, Search, Truck, Coins } from 'lucide-react';
+import { SlidersHorizontal, Building, DollarSign, Package, Users, Cog, DatabaseBackup, FileText, Shield, Bell, Search, Truck, Coins, MessageSquare } from 'lucide-react';
 import Card from './common/Card';
 import AccountingSettingsComponent from './settings/AccountingSettings';
 import CustomerSettingsComponent from './settings/CustomerSettings';
@@ -17,6 +19,7 @@ import NotificationSettings from './settings/NotificationSettings';
 import PurchaseSettingsComponent from './settings/PurchaseSettings';
 import ExchangeCompaniesSettings from './settings/ExchangeCompaniesSettings';
 import CurrencyManagement from './settings/CurrencyManagement';
+import IntegrationsSettings from './settings/IntegrationsSettings';
 
 
 const Settings: React.FC = () => {
@@ -27,6 +30,7 @@ const Settings: React.FC = () => {
     const allTabs: { id: string, label: string, icon: React.ElementType, component: React.ReactNode, permission: Permission }[] = [
         { id: 'general', label: t('general'), icon: Cog, component: <GeneralSettings />, permission: 'manage_settings' },
         { id: 'company_profile', label: t('company_profile'), icon: Building, component: <CompanyProfileSettings />, permission: 'manage_settings' },
+        { id: 'integrations', label: t('integrations'), icon: MessageSquare, component: <IntegrationsSettings />, permission: 'manage_settings' },
         { id: 'users', label: t('users_and_roles'), icon: Users, component: <UsersAndPermissions />, permission: 'manage_users' },
         { id: 'security', label: t('security_settings'), icon: Shield, component: <SecuritySettings />, permission: 'manage_settings' },
         { id: 'notifications_settings', label: t('notification_settings'), icon: Bell, component: <NotificationSettings />, permission: 'manage_settings' },

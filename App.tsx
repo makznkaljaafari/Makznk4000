@@ -1,7 +1,5 @@
 
 
-
-
 import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { AppProvider } from './contexts/AppContext';
 import Sidebar from './components/Sidebar';
@@ -128,6 +126,7 @@ const App: React.FC = () => {
                     currency: 'SAR', taxNumber: '1234567890',
                     invoiceSettings: { prefix: 'INV-', nextNumber: 1, template: 'default' },
                     taxSettings: { isEnabled: true, rate: 0.15 },
+                    integrationSettings: { whatsappApiKey: '', whatsappStatus: 'disconnected', telegramBotToken: '', telegramStatus: 'disconnected' },
                     subscriptionPlanId: 'pro', subscriptionStatus: 'active'
                 };
                 
@@ -339,7 +338,7 @@ const App: React.FC = () => {
   };
   
   return (
-    // FIX: The error here was a red herring. The root cause was in the ErrorBoundary component's implementation, which has been fixed.
+    // FIX: The error on this line was a red herring. The root cause was in the ErrorBoundary component's implementation, which has been fixed.
     <ErrorBoundary>
       <AppProvider value={contextValue}>
         <ThemeApplicator />

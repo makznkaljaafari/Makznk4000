@@ -46,6 +46,13 @@ export interface SubscriptionPlan {
     features: SubscriptionFeatures;
 }
 
+export interface IntegrationSettings {
+    whatsappApiKey: string;
+    whatsappStatus: 'connected' | 'disconnected';
+    telegramBotToken: string;
+    telegramStatus: 'connected' | 'disconnected';
+}
+
 
 export interface Company {
   id: string;
@@ -58,6 +65,7 @@ export interface Company {
   taxNumber: string;
   invoiceSettings: InvoiceSettings;
   taxSettings: TaxSettings;
+  integrationSettings: IntegrationSettings;
   subscriptionPlanId: string;
   subscriptionStatus: 'active' | 'trial' | 'expired';
   dashboardLayout?: string[];

@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Part, Customer, Sale, PurchaseOrder, Supplier, SalesReturn, Warehouse, InventoryMovement, StoreTransfer, User, WarehouseSettings, CustomerSettings, FinancialAccount, FinancialTransaction, Currency, Account, JournalEntry, AccountingSettings, Notification, AppearanceSettings, ColorTheme, BackupSettings, PartKit, Company, ActivityLog, CustomReportDefinition, PurchaseReturn, CartItem, NotificationSettings, CommunicationLog, Quotation, Profile, UserCompany, PurchaseSettings, Task, Promotion, ExchangeCompany, JournalEntryItem } from '../types';
@@ -421,7 +420,7 @@ export const useAppStore = create<AppState>()(persist(
     setSales: (updater) => set(state => ({ sales: typeof updater === 'function' ? updater(state.sales) : updater })),
     addSale: async (saleDetails) => {
         const state = get();
-        const { activeCompany, parts, notifications, addNotification } = state;
+        const { activeCompany, parts, notifications, addNotification, customers } = state;
         if (!activeCompany) throw new Error("No active company");
     
         const nextNumber = (activeCompany.invoiceSettings.nextNumber || 0) + 1;
@@ -443,14 +442,15 @@ export const useAppStore = create<AppState>()(persist(
                 newParts[partIndex] = updatedPart;
     
                 // Check for low stock alert, but only trigger if it crosses the threshold
-                if (updatedPart.stock <= updatedPart.minStock && originalPart.stock > updatedPart.minStock) {
+                if (updatedPart.stock < updatedPart.minStock && originalPart.stock >= originalPart.minStock) {
                     const existingNotification = notifications.find(n => n.type === 'low_stock' && n.relatedId === updatedPart.id && !n.isRead);
                     if (!existingNotification) {
                         addNotification({
                             type: 'low_stock',
                             messageKey: 'low_stock_alert',
                             messageParams: { partName: updatedPart.name, stock: updatedPart.stock, minStock: updatedPart.minStock },
-                            relatedId: updatedPart.id
+                            relatedId: updatedPart.id,
+                            actions: [{ labelKey: 'create_purchase_order', actionType: 'create_po', relatedId: updatedPart.id }]
                         });
                     }
                 }
@@ -475,6 +475,20 @@ export const useAppStore = create<AppState>()(persist(
             paidAmount: 0,
         };
         
+        const customerForDebtCheck = customers.find(c => c.id === saleDetails.customerId);
+        if (customerForDebtCheck && saleDetails.saleType === 'credit') {
+            const newDebt = customerForDebtCheck.totalDebt + total;
+            if (newDebt > customerForDebtCheck.creditLimit && customerForDebtCheck.totalDebt <= customerForDebtCheck.creditLimit) {
+                addNotification({
+                    type: 'credit_alert',
+                    messageKey: 'credit_limit_exceeded_alert',
+                    messageParams: { customerName: customerForDebtCheck.name },
+                    relatedId: customerForDebtCheck.id,
+                    actions: [{ labelKey: 'record_payment', actionType: 'record_payment_customer', relatedId: customerForDebtCheck.id }]
+                });
+            }
+        }
+
         set(s => ({
             sales: [newSale, ...s.sales],
             parts: newParts,

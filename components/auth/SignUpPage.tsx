@@ -1,5 +1,4 @@
 
-
 import React, { useState } from 'react';
 import { useLocalization } from '../../hooks/useLocalization';
 import { useAppStore } from '../../stores/useAppStore';
@@ -75,6 +74,13 @@ const SignUpPage: React.FC<SignUpPageProps> = ({ onSwitchToLogin }) => {
                 taxSettings: {
                     isEnabled: false,
                     rate: 0,
+                },
+                // FIX: Add missing 'integrationSettings' property to satisfy the Company type.
+                integrationSettings: {
+                    whatsappApiKey: '',
+                    whatsappStatus: 'disconnected',
+                    telegramBotToken: '',
+                    telegramStatus: 'disconnected',
                 },
                 subscriptionPlanId: 'trial-plan',
                 subscriptionStatus: 'trial'

@@ -1,6 +1,7 @@
 
 
 
+
 import { useCallback } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { arTranslations } from './locales/ar';
